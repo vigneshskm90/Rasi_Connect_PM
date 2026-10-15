@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#24392a">
+<title>Rasi Connect</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --husk:#24392a; --husk-2:#34503a; --corn:#f0b429; --corn-ink:#3a2a00;
+  --bg:#f1f3ef; --card:#ffffff; --text:#1d2520; --muted:#66706a; --line:#dfe4dc; --error:#b3261e;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:'Roboto',system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+button{font-family:inherit;touch-action:manipulation;cursor:pointer}
+:focus-visible{outline:3px solid var(--corn);outline-offset:2px}
+
+#map{position:fixed;inset:0;z-index:1}
+
+/* Top bar */
+.topbar{position:fixed;top:0;left:0;right:0;z-index:2000;background:var(--husk);color:#fff;
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.topbar h1{font-size:18px;font-weight:700;margin:0;flex:1;min-width:0}
+.topbar .status{font-size:13px;opacity:.85;display:block;font-weight:400;margin-top:2px}
+.btn-end{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:100px;padding:10px 16px;font-size:14px;font-weight:500;display:none}
+
+/* Start overlay */
+.start{position:fixed;inset:0;z-index:900;display:flex;align-items:flex-end;padding:16px;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,rgba(36,57,42,.75),rgba(36,57,42,0) 70%)}
+.start .panel{width:100%;background:var(--card);border-radius:24px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
+.start h2{margin:0 0 6px;font-size:22px}
+.start p{margin:0 0 20px;color:var(--muted);line-height:1.45}
+
+/* Bottom sheet */
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:1000;background:var(--card);border-radius:24px 24px 0 0;
+  box-shadow:0 -4px 20px rgba(0,0,0,.18);padding:10px 16px calc(16px + env(safe-area-inset-bottom,0px));
+  max-height:78dvh;overflow-y:auto;display:none}
+.sheet .grip{width:40px;height:4px;border-radius:2px;background:var(--line);margin:0 auto 12px}
+.sheet .body{display:none}
+.sheet.open .body{display:block}
+.sheet.open .open-btn{display:none}
+
+.btn{border:none;border-radius:100px;padding:17px;width:100%;font-size:16px;font-weight:500}
+.btn-main{background:var(--husk);color:#fff}
+.btn-log{background:var(--corn);color:var(--corn-ink);font-weight:700}
+.btn[disabled]{opacity:.6}
+.btn-ghost{background:transparent;color:var(--muted);padding:12px;margin-top:4px}
+
+label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin:0 0 6px 4px}
+input,textarea{width:100%;padding:15px;margin-bottom:14px;border:1.5px solid var(--line);border-radius:14px;font-size:16px;
+  background:#f8faf7;font-family:inherit;color:var(--text);-webkit-appearance:none}
+input:focus,textarea:focus{outline:none;border-color:var(--husk);background:#fff}
+
+.list-title{font-size:14px;font-weight:700;margin:22px 4px 8px}
+.empty{color:var(--muted);font-size:14px;margin:0 4px}
+.visit{display:flex;gap:12px;align-items:center;padding:12px 4px;border-top:1px solid var(--line);width:100%;background:none;border-left:0;border-right:0;border-bottom:0;text-align:left;color:inherit}
+.visit .n{flex:none;width:30px;height:30px;border-radius:50%;background:var(--husk);color:#fff;font-size:13px;font-weight:700;display:grid;place-items:center}
+.visit .t{flex:1;min-width:0}
+.visit .t b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.visit .t span{font-size:13px;color:var(--muted)}
+.visit time{font-size:13px;color:var(--muted)}
+
+/* Map pins */
+.pin{width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--husk);border:2.5px solid #fff;
+  box-shadow:0 2px 6px rgba(0,0,0,.35);display:grid;place-items:center}
+.pin span{transform:rotate(45deg);color:#fff;font-weight:700;font-size:13px}
+.pin.start{background:var(--corn)}
+.pin.start span{color:var(--corn-ink)}
+.leaflet-top{margin-top:calc(var(--tb,100px) + 12px)}
+.leaflet-popup-content{font-size:15px;font-family:'Roboto',sans-serif}
+
+.toast{position:fixed;left:16px;right:16px;bottom:calc(110px + env(safe-area-inset-bottom,0px));z-index:3000;background:#222;color:#fff;
+  padding:14px 16px;border-radius:14px;font-size:14px;line-height:1.4;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
+.toast.err{background:var(--error)}
+
+.tabs{flex-basis:100%;display:flex;margin-top:2px}
+.tab{flex:1;background:transparent;color:rgba(255,255,255,.7);border:0;border-bottom:3px solid transparent;padding:10px 0;font-size:15px;font-weight:500}
+.tab.on{color:#fff;border-bottom-color:var(--corn)}
+.hist{position:fixed;left:0;right:0;bottom:0;top:var(--tb,100px);z-index:1500;background:var(--bg);overflow-y:auto;display:none;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.strip-wrap{background:var(--card);border-bottom:1px solid var(--line);padding:12px 0 8px;position:sticky;top:0;z-index:2}
+.month{font-size:15px;font-weight:700;padding:0 16px 8px}
+.strip{display:flex;gap:6px;overflow-x:auto;padding:0 12px;scrollbar-width:none}
+.strip::-webkit-scrollbar{display:none}
+.day{flex:none;width:52px;padding:8px 0;border-radius:14px;border:0;background:transparent;color:var(--text);display:flex;flex-direction:column;align-items:center;gap:2px}
+.day small{font-size:12px;color:var(--muted)}
+.day b{font-size:17px}
+.day i{width:6px;height:6px;border-radius:50%;margin-top:2px}
+.day.has i{background:var(--corn)}
+.day.sel{background:var(--husk);color:#fff}
+.day.sel small{color:rgba(255,255,255,.8)}
+.hist .inner{padding:16px}
+.sum{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:6px}
+.sum h3{margin:0;font-size:18px}
+.sum p{margin:2px 0 0;color:var(--muted);font-size:14px}
+.chip-btn{flex:none;background:var(--corn);color:var(--corn-ink);border:0;border-radius:100px;padding:10px 16px;font-weight:700;font-size:14px}
+.hv{background:var(--card);border-radius:14px;padding:14px;margin-top:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.hv b{font-size:16px}
+.hv .m{color:var(--muted);font-size:13px;margin-top:2px}
+.hv p{margin:8px 0 0;font-size:14px;line-height:1.4}
+.edit{flex:none;background:transparent;color:var(--husk);border:1.5px solid var(--line);border-radius:100px;padding:8px 14px;font-size:14px;font-weight:500}
+.back{position:fixed;left:16px;right:16px;width:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:1000;display:none}
+body.viewing .sheet,body.viewing .start{display:none!important}
+body.viewing .back{display:block}
+.btn-del{background:transparent;color:var(--error);border:1.5px solid var(--error);margin-top:10px;display:none}
+.tab{min-height:48px}.btn-end,.edit,.chip-btn{min-height:44px}.btn-ghost{min-height:48px}
+
+.menu{flex:none;width:44px;height:44px;border:0;background:transparent;color:#fff;border-radius:50%;position:relative;display:grid;place-items:center}
+.menu.dot::after{content:'';position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--corn);border:2px solid var(--husk)}
+.more{position:fixed;left:0;right:0;bottom:0;top:var(--tb,100px);z-index:1600;background:var(--bg);overflow-y:auto;display:none;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
+.more .inner{padding:20px 16px}
+.more h2{margin:0 0 6px;font-size:20px}
+.more p{color:var(--muted);line-height:1.45;margin:0 0 8px;font-size:15px}
+.more p.note{font-weight:500;color:var(--text)}
+.more .btn{margin-top:12px}
+.btn-line{background:transparent;color:var(--husk);border:1.5px solid var(--husk)}
+.sig{margin-top:36px;text-align:center;color:var(--muted);font-size:13px}
+.sig b{display:block;color:var(--text);font-size:15px;margin-bottom:2px}
+.by{text-align:center;color:var(--muted);font-size:13px;margin-top:14px}
+@media (prefers-reduced-motion:no-preference){.sheet,.start .panel{transition:transform .2s}}
+</style>
+</head>
+<body>
+
+<div id="map"></div>
+
+<header class="topbar" id="topbar">
+  <h1>Rasi Connect<span class="status" id="status">Not started</span></h1>
+  <button class="btn-end" id="endBtn" onclick="endDay()">End day</button>
+  <button class="menu" id="moreBtn" aria-label="More" onclick="toggleMore()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
+  <div class="tabs"><button class="tab on" id="tabToday" onclick="switchTab('today')">Today</button><button class="tab" id="tabHist" onclick="switchTab('history')">History</button></div>
+</header>
+
+<div class="start" id="start">
+  <div class="panel">
+    <h2>Ready for the field?</h2>
+    <p>Start your day to mark your starting point. Each visit you log is pinned at your current location.</p>
+    <button class="btn btn-main" id="startBtn" onclick="startDay()">Start day</button>
+    <div class="by">By SKMV</div>
+  </div>
+</div>
+
+<section class="sheet" id="sheet" aria-label="Log a visit">
+  <div class="grip"></div>
+  <button class="btn btn-log open-btn" onclick="toggleSheet(true)">Log a visit</button>
+  <div class="body">
+    <label for="storeName">Store or dealer</label>
+    <input type="text" id="storeName" autocomplete="off">
+    <label for="distName">Distributor</label>
+    <input type="text" id="distName" autocomplete="off">
+    <label for="remarks">Notes</label>
+    <textarea id="remarks" rows="3"></textarea>
+    <button class="btn btn-log" id="saveBtn" onclick="logVisit()">Save visit at my location</button>
+    <button class="btn btn-del" id="delBtn" onclick="deleteVisit()">Delete this visit</button>
+    <button class="btn btn-ghost" onclick="toggleSheet(false)">Close</button>
+
+    <div class="list-title" id="listTitle">Today's visits</div>
+    <div id="list"></div>
+  </div>
+</section>
+
+<section class="hist" id="hist"><div class="strip-wrap"><div class="month" id="month"></div><div class="strip" id="strip"></div></div><div class="inner" id="histBody"></div></section>
+<button class="btn btn-main back" onclick="backFromMap()">Back to history</button>
+
+<section class="more" id="more" aria-label="Backup and transfer"><div class="inner">
+  <h2>Backup and transfer</h2>
+  <p class="note" id="bkNote"></p>
+  <p>A backup holds every visit from all days, plus the day in progress. Back up once a month, and before moving to a new phone.</p>
+  <button class="btn btn-main" id="bkSave" onclick="saveBackup(false)">Save backup to phone</button>
+  <button class="btn btn-log" id="bkShare" onclick="saveBackup(true)">Send backup to another device</button>
+  <button class="btn btn-line" onclick="$('bkFile').click()">Restore from a backup file</button>
+  <input type="file" id="bkFile" accept=".json,application/json" hidden>
+  <div class="sig"><b>Rasi Connect</b>By SKMV</div>
+</div></section>
+
+<div class="toast" id="toast" role="status"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const KEY = 'fieldtracker.day';
+const FOLDER = 'Rasi Connect PM';
+const native = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
+const Plugins = window.Capacitor ? Capacitor.Plugins : {};
+const HKEY = 'fieldtracker.history';
+const SAVE_LABEL = 'Save visit at my location';
+let history = {}, editIndex = null, selDay = null, histLayer;
+try { history = JSON.parse(localStorage.getItem(HKEY) || '{}'); } catch (e) { history = {}; }
+const dkey = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+const curKey = () => data.length ? dkey(data[0].iso) : null;
+let map, layer, data = [], markers = [], toastTimer;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const visits = () => data.filter(d => d.type === 'Visit');
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} writeFile(); };
+
+async function writeFile(final) {
+  if (!native || !data.length) return false;
+  try {
+    await Plugins.Filesystem.writeFile({
+      path: final ? FOLDER + '/Route_' + curKey() + '.json' : FOLDER + '/Drafts/Route_' + curKey() + '.draft.json',
+      data: JSON.stringify(final ? (history[curKey()] || []).concat(data) : data, null, 2),
+      directory: 'DOCUMENTS', encoding: 'utf8', recursive: true
+    });
+    if (final) { try { await Plugins.Filesystem.deleteFile({ path: FOLDER + '/Drafts/Route_' + curKey() + '.draft.json', directory: 'DOCUMENTS' }); } catch (e) {} }
+    return true;
+  } catch (e) { toast('Could not write to the ' + FOLDER + ' folder.', true); return false; }
+}
+
+function toast(msg, isErr) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (isErr ? ' err' : '');
+  t.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.style.display = 'none', 3500);
+}
+
+function locate(btn, busyText, ok) {
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = busyText;
+  const done = () => { btn.disabled = false; btn.textContent = label; };
+  if (native) {
+    Plugins.Geolocation.requestPermissions()
+      .then(() => Plugins.Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }))
+      .then(p => { done(); ok(p); })
+      .catch(() => { done(); toast('Could not get your location. Turn on Location in phone settings and allow it for this app.', true); });
+    return;
+  }
+  if (!navigator.geolocation) { done(); toast('This device does not support location.', true); return; }
+  navigator.geolocation.getCurrentPosition(
+    p => { done(); ok(p); },
+    err => {
+      done();
+      let msg = 'Could not get your location. Try again.';
+      if (!window.isSecureContext) msg = 'Location only works on https or localhost pages, not a file opened from storage. Host the file and open it from its web address.';
+      else if (err.code === 1) msg = 'Location is blocked. Tap the lock icon next to the address, allow Location, then reload.';
+      else if (err.code === 2) msg = 'Location is unavailable. Turn on your device\'s location services and try again.';
+      else if (err.code === 3) msg = 'Location timed out. Move to an open area and try again.';
+      toast(msg, true);
+    },
+    { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
+  );
+}
+
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([20.59, 78.96], 5);
+  const street = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+    subdomains: 'abcd', maxZoom: 19, attribution: '© OpenStreetMap © CARTO'
+  }).addTo(map);
+  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    maxZoom: 19, attribution: 'Tiles © Esri'
+  });
+  L.control.layers({ 'Map': street, 'Satellite': satellite }, null, { position: 'topright' }).addTo(map);
+  layer = L.layerGroup().addTo(map);
+}
+
+function popupHtml(e) {
+  if (e.type === 'Start') return `<b>Start of day</b><br><small>${esc(e.time)}</small>`;
+  return `<b style="color:#24392a">${esc(e.store)}</b>` +
+    (e.dist ? `<br><span style="color:#66706a">${esc(e.dist)}</span>` : '') +
+    (e.remarks ? `<p style="margin:8px 0 0">${esc(e.remarks)}</p>` : '') +
+    `<br><small style="color:#66706a">${esc(e.time)}</small>`;
+}
+
+function addMarker(e, idx) {
+  const isStart = e.type === 'Start';
+  const n = isStart ? 'S' : visits().indexOf(e) + 1;
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="pin${isStart ? ' start' : ''}"><span>${n}</span></div>`,
+    iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -30]
+  });
+  markers[idx] = L.marker([e.lat, e.lng], { icon }).addTo(layer).bindPopup(popupHtml(e));
+  return markers[idx];
+}
+
+function renderUI() {
+  refreshBackupUI();
+  const active = data.length > 0;
+  $('start').style.display = active ? 'none' : 'flex';
+  $('sheet').style.display = active ? 'block' : 'none';
+  $('endBtn').style.display = active ? 'block' : 'none';
+  const v = visits().length;
+  $('status').textContent = active ? `${v} ${v === 1 ? 'visit' : 'visits'} logged` : 'Not started';
+
+  const list = $('list');
+  if (!v) { list.innerHTML = '<p class="empty">No visits yet. Your first one will show up here.</p>'; return; }
+  list.innerHTML = data.map((e, i) => e.type !== 'Visit' ? '' : `
+    <div class="visit">
+      <div class="n">${visits().indexOf(e) + 1}</div>
+      <div class="t" onclick="focusVisit(${i})"><b>${esc(e.store)}</b><span>${esc(e.dist || 'No distributor')}, ${esc(e.time)}</span></div>
+      <button class="edit" onclick="editVisit(${i})">Edit</button>
+    </div>`).reverse().join('');
+}
+
+function focusVisit(i) {
+  toggleSheet(false);
+  map.setView([data[i].lat, data[i].lng], 16);
+  markers[i].openPopup();
+}
+
+function toggleSheet(open) {
+  if (!open && editIndex !== null) finishEdit();
+  $('sheet').classList.toggle('open', open);
+  if (open) $('storeName').focus({ preventScroll: true });
+}
+
+function startDay() {
+  locate($('startBtn'), 'Getting location…', p => {
+    const e = { type: 'Start', time: new Date().toLocaleString(), iso: new Date().toISOString(), lat: p.coords.latitude, lng: p.coords.longitude };
+    data = [e]; save();
+    addMarker(e, 0).openPopup();
+    map.setView([e.lat, e.lng], 14);
+    renderUI();
+  });
+}
+
+function logVisit() {
+  const store = $('storeName').value.trim();
+  if (!store) { toast('Enter a store or dealer name to save this visit.', true); $('storeName').focus(); return; }
+  if (editIndex !== null) {
+    Object.assign(data[editIndex], { store, dist: $('distName').value.trim(), remarks: $('remarks').value.trim() });
+    save(); rebuildMarkers(); renderUI(); finishEdit(); toast('Visit updated.');
+    return;
+  }
+  locate($('saveBtn'), 'Getting location…', p => {
+    const e = {
+      type: 'Visit', store, dist: $('distName').value.trim(), remarks: $('remarks').value.trim(),
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), iso: new Date().toISOString(),
+      lat: p.coords.latitude, lng: p.coords.longitude
+    };
+    data.push(e); save();
+    renderUI();
+    $('storeName').value = $('distName').value = $('remarks').value = '';
+    toggleSheet(false);
+    map.setView([e.lat, e.lng], 16);
+    addMarker(e, data.length - 1).openPopup();
+    toast('Visit saved.');
+  });
+}
+
+async function endDay() {
+  if (!data.length) return;
+  if (!confirm('End the day? Your visits will be saved as the final record.')) return;
+  const key = curKey();
+  let saved = false;
+  if (native) saved = await writeFile(true);
+  if (!saved) {
+    const href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = FOLDER + ' - Route_' + key + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+  }
+  history[key] = (history[key] || []).concat(data);
+  try { localStorage.setItem(HKEY, JSON.stringify(history)); } catch (e) {}
+  data = []; markers = []; layer.clearLayers(); save(); renderUI();
+  selDay = key;
+  switchTab('history');
+  toast(saved ? 'Day saved to Documents/' + FOLDER : 'Day saved and exported.');
+}
+
+function editVisit(i) {
+  editIndex = i;
+  $('storeName').value = data[i].store; $('distName').value = data[i].dist || ''; $('remarks').value = data[i].remarks || '';
+  $('saveBtn').textContent = 'Update visit';
+  $('delBtn').style.display = 'block';
+  toggleSheet(true);
+}
+function finishEdit() {
+  editIndex = null;
+  $('storeName').value = $('distName').value = $('remarks').value = '';
+  $('saveBtn').textContent = SAVE_LABEL;
+  $('delBtn').style.display = 'none';
+  $('sheet').classList.remove('open');
+}
+function deleteVisit() {
+  if (editIndex === null || !confirm('Delete this visit?')) return;
+  data.splice(editIndex, 1);
+  save(); rebuildMarkers(); renderUI(); finishEdit();
+}
+function rebuildMarkers() { layer.clearLayers(); markers = []; data.forEach((e, i) => addMarker(e, i)); }
+
+/* ---------- History tab ---------- */
+const pinIcon = (n, start) => L.divIcon({ className: '', html: `<div class="pin${start ? ' start' : ''}"><span>${n}</span></div>`, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -30] });
+const dayEntries = k => k === curKey() ? data : (history[k] || []);
+
+function switchTab(name) {
+  closeMore();
+  exitViewing();
+  $('tabToday').classList.toggle('on', name === 'today');
+  $('tabHist').classList.toggle('on', name === 'history');
+  $('hist').style.display = name === 'history' ? 'block' : 'none';
+  if (name === 'history') { if (!selDay) selDay = curKey() || dkey(new Date()); renderHistory(true); }
+}
+
+function pickDay(k) { selDay = k; renderHistory(false); }
+
+function renderHistory(toEnd) {
+  const has = new Set(Object.keys(history));
+  if (curKey()) has.add(curKey());
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  let from = new Date(today); from.setDate(from.getDate() - 29);
+  has.forEach(k => { const d = new Date(k + 'T00:00:00'); if (d < from) from = d; });
+  const days = [];
+  for (const d = new Date(from); d <= today && days.length < 500; d.setDate(d.getDate() + 1)) days.push(dkey(d));
+  const strip = $('strip');
+  strip.innerHTML = days.map(k => {
+    const d = new Date(k + 'T00:00:00');
+    return `<button class="day${has.has(k) ? ' has' : ''}${k === selDay ? ' sel' : ''}" onclick="pickDay('${k}')"><small>${d.toLocaleDateString('en-IN', { weekday: 'short' })}</small><b>${d.getDate()}</b><i></i></button>`;
+  }).join('');
+  const sd = new Date(selDay + 'T00:00:00');
+  $('month').textContent = sd.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+  const entries = dayEntries(selDay);
+  const vs = entries.filter(e => e.type === 'Visit');
+  const st = entries.find(e => e.type === 'Start');
+  const label = sd.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
+  $('histBody').innerHTML = !entries.length
+    ? `<p class="empty">No visits recorded on ${esc(label)}.</p>`
+    : `<div class="sum"><div><h3>${esc(label)}</h3><p>${vs.length} ${vs.length === 1 ? 'visit' : 'visits'}${st ? ', started ' + esc(new Date(st.iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : ''}${selDay === curKey() ? ' (in progress)' : ''}</p></div><button class="chip-btn" onclick="showOnMap()">Show on map</button></div>`
+      + vs.map((e, i) => `<div class="hv"><b>${i + 1}. ${esc(e.store)}</b><div class="m">${esc(e.dist || 'No distributor')}, ${esc(e.time)}</div>${e.remarks ? `<p>${esc(e.remarks)}</p>` : ''}</div>`).join('');
+  if (toEnd) strip.scrollLeft = strip.scrollWidth;
+  else { const el = strip.querySelector('.sel'); if (el) el.scrollIntoView({ inline: 'center', block: 'nearest' }); }
+}
+
+function showOnMap() {
+  const entries = dayEntries(selDay);
+  if (!entries.length) return;
+  if (!histLayer) histLayer = L.layerGroup();
+  histLayer.clearLayers();
+  map.removeLayer(layer);
+  histLayer.addTo(map);
+  const pts = [], vs = entries.filter(e => e.type === 'Visit');
+  entries.forEach(e => {
+    const s = e.type === 'Start';
+    L.marker([e.lat, e.lng], { icon: pinIcon(s ? 'S' : vs.indexOf(e) + 1, s) }).addTo(histLayer).bindPopup(popupHtml(e));
+    pts.push([e.lat, e.lng]);
+  });
+  $('hist').style.display = 'none';
+  document.body.classList.add('viewing');
+  map.fitBounds(pts, { padding: [60, 60], maxZoom: 16 });
+}
+function exitViewing() {
+  if (!document.body.classList.contains('viewing')) return;
+  document.body.classList.remove('viewing');
+  histLayer.clearLayers(); map.removeLayer(histLayer); layer.addTo(map);
+}
+function backFromMap() { switchTab('history'); }
+
+/* ---------- Backup and transfer ---------- */
+const LKEY = 'fieldtracker.lastBackup';
+const validDay = a => Array.isArray(a) && a.every(e => e && typeof e.lat === 'number' && typeof e.lng === 'number' && e.iso);
+
+function refreshBackupUI() {
+  const last = localStorage.getItem(LKEY);
+  const keys = Object.keys(history).sort();
+  const hasData = keys.length > 0 || data.length > 0;
+  const age = d => Math.floor((Date.now() - new Date(d)) / 864e5);
+  let due = false;
+  if (hasData) due = last ? age(last) >= 30 : (keys.length > 0 && age(keys[0] + 'T00:00:00') >= 30);
+  const fmt = d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
+  $('bkNote').textContent = last
+    ? 'Last backup: ' + fmt(last) + (due ? '. A month has passed, so it is time to back up again.' : '.')
+    : 'No backup yet.' + (due ? ' You have a month of data, so it is time to back up.' : '');
+  $('moreBtn').classList.toggle('dot', due);
+  return due;
+}
+
+function toggleMore() { $('more').style.display === 'block' ? closeMore() : openMore(); }
+function openMore() { exitViewing(); refreshBackupUI(); $('more').style.display = 'block'; }
+function closeMore() { $('more').style.display = 'none'; }
+
+async function makeBackupFile() {
+  const name = 'Rasi Connect Backup ' + dkey(new Date()) + '.json';
+  const text = JSON.stringify({ app: 'Rasi Connect', format: 1, created: new Date().toISOString(), history, current: data }, null, 2);
+  if (native) {
+    try {
+      const path = FOLDER + '/Backups/' + name;
+      await Plugins.Filesystem.writeFile({ path, data: text, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
+      localStorage.setItem(LKEY, new Date().toISOString()); refreshBackupUI();
+      return { path };
+    } catch (e) { /* fall through to download */ }
+  }
+  const a = document.createElement('a');
+  a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(text);
+  a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  localStorage.setItem(LKEY, new Date().toISOString()); refreshBackupUI();
+  return {};
+}
+
+async function saveBackup(share) {
+  const btn = $(share ? 'bkShare' : 'bkSave');
+  btn.disabled = true;
+  try {
+    const r = await makeBackupFile();
+    if (share && r.path && Plugins.Share) {
+      const { uri } = await Plugins.Filesystem.getUri({ path: r.path, directory: 'DOCUMENTS' });
+      await Plugins.Share.share({ title: 'Rasi Connect backup', files: [uri], dialogTitle: 'Send backup to another device' });
+    } else {
+      toast(r.path ? 'Backup saved in Documents/' + FOLDER + '/Backups' : 'Backup downloaded.');
+    }
+  } catch (e) {
+    if (!/cancel/i.test((e && e.message) || '')) toast('Could not complete the backup. Try again.', true);
+  }
+  btn.disabled = false;
+}
+
+$('bkFile').onchange = async ev => {
+  const f = ev.target.files[0];
+  ev.target.value = '';
+  if (!f) return;
+  try {
+    const b = JSON.parse(await f.text());
+    if (!b || b.app !== 'Rasi Connect' || typeof b.history !== 'object') throw new Error('bad');
+    const days = Object.keys(b.history).filter(k => validDay(b.history[k]));
+    if (!confirm('Restore ' + days.length + ' days from this backup? Days already on this phone stay as they are.')) return;
+    let added = 0;
+    days.forEach(k => { if (!history[k]) { history[k] = b.history[k]; added++; } });
+    try { localStorage.setItem(HKEY, JSON.stringify(history)); } catch (e) {}
+    let msg = added + (added === 1 ? ' day' : ' days') + ' restored';
+    if (!data.length && Array.isArray(b.current) && b.current.length && validDay(b.current)) {
+      data = b.current; save(); rebuildMarkers();
+      const last = data[data.length - 1];
+      map.setView([last.lat, last.lng], 14);
+      msg += ', plus the day in progress';
+    }
+    renderUI(); closeMore();
+    if ($('hist').style.display === 'block') renderHistory(false);
+    toast(msg + '.');
+  } catch (e) {
+    toast('That file is not a Rasi Connect backup.', true);
+  }
+};
+
+// Boot: restore an unfinished day after a refresh or crash
+if (native && Plugins.Filesystem) Plugins.Filesystem.requestPermissions().catch(() => {});
+const fitTop = () => document.documentElement.style.setProperty('--tb', $('topbar').offsetHeight + 'px');
+fitTop();
+if (window.ResizeObserver) new ResizeObserver(fitTop).observe($('topbar'));
+initMap();
+try { data = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { data = []; }
+data.forEach((e, i) => addMarker(e, i));
+if (data.length) map.setView([data[data.length - 1].lat, data[data.length - 1].lng], 14);
+renderUI();
+if (refreshBackupUI()) toast('It has been a month. Open the menu to back up your data.');
+</script>
+</body>
+</html>
