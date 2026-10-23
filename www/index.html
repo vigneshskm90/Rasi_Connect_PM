@@ -3,33 +3,53 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
-<meta name="theme-color" content="#24392a">
+<meta name="theme-color" content="#24392a" id="metaThemeColor">
 <title>Rasi Connect</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<!-- Google Material Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" rel="stylesheet">
 <style>
-:root{
-  --husk:#24392a; --husk-2:#34503a; --corn:#f0b429; --corn-ink:#3a2a00;
-  --bg:#f1f3ef; --card:#ffffff; --text:#1d2520; --muted:#66706a; --line:#dfe4dc; --error:#b3261e;
+:root {
+  --husk: #24392a; --husk-2: #34503a; --corn: #f0b429; --corn-ink: #3a2a00;
+  --bg: #f1f3ef; --card: #ffffff; --text: #1d2520; --muted: #66706a; --line: #dfe4dc; --error: #b3261e;
+  --ripple-color: rgba(0, 0, 0, 0.15);
 }
+/* OLED Dark Mode Colors */
+:root[data-theme="dark"] {
+  --husk: #1a291e; --husk-2: #24392a; --corn: #f0b429; --corn-ink: #3a2a00;
+  --bg: #000000; --card: #121212; --text: #e1e3e1; --muted: #8c9690; --line: #2d3630; --error: #ffb4ab;
+  --ripple-color: rgba(255, 255, 255, 0.15);
+}
+
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
-body{font-family:'Roboto',system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
-button{font-family:inherit;touch-action:manipulation;cursor:pointer}
-:focus-visible{outline:3px solid var(--corn);outline-offset:2px}
+body{font-family:'Roboto',system-ui,sans-serif;background:var(--bg);color:var(--text);overscroll-behavior:none;-webkit-tap-highlight-color:transparent; transition: background 0.3s, color 0.3s;}
 
+/* Ripple Effect Styles */
+button {
+  font-family:inherit; touch-action:manipulation; cursor:pointer;
+  position: relative; overflow: hidden; 
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.ripple-span {
+  position: absolute; border-radius: 50%; background: var(--ripple-color);
+  transform: scale(0); animation: ripple-anim 0.6s linear; pointer-events: none;
+}
+@keyframes ripple-anim { to { transform: scale(4); opacity: 0; } }
+
+:focus-visible{outline:3px solid var(--corn);outline-offset:2px}
 #map{position:fixed;inset:0;z-index:1}
 
 /* Top bar */
 .topbar{position:fixed;top:0;left:0;right:0;z-index:2000;background:var(--husk);color:#fff;
-  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 12px;display:flex;flex-wrap:wrap;align-items:center;gap:12px}
-.topbar h1{font-size:18px;font-weight:700;margin:0;flex:1;min-width:0}
+  padding:calc(12px + env(safe-area-inset-top,0px)) 16px 0px; display:flex;flex-wrap:wrap;align-items:center;gap:12px; transition: background 0.3s;}
+.topbar h1{font-size:18px;font-weight:700;margin:0;flex:1;min-width:0; padding-bottom: 12px;}
 .topbar .status{font-size:13px;opacity:.85;display:block;font-weight:400;margin-top:2px}
-.btn-end{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:100px;padding:10px 16px;font-size:14px;font-weight:500;display:none}
+.btn-end{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.55);border-radius:100px;padding:8px 14px;font-size:14px;font-weight:500;display:none; margin-bottom: 12px;}
 
 /* Start overlay */
 .start{position:fixed;inset:0;z-index:900;display:flex;align-items:flex-end;padding:16px;
-  padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,rgba(36,57,42,.75),rgba(36,57,42,0) 70%)}
+  padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));background:linear-gradient(to top,rgba(36,57,42,.9),rgba(36,57,42,0) 70%)}
 .start .panel{width:100%;background:var(--card);border-radius:24px;padding:24px;box-shadow:0 8px 24px rgba(0,0,0,.2)}
 .start h2{margin:0 0 6px;font-size:22px}
 .start p{margin:0 0 20px;color:var(--muted);line-height:1.45}
@@ -45,14 +65,15 @@ button{font-family:inherit;touch-action:manipulation;cursor:pointer}
 
 .btn{border:none;border-radius:100px;padding:17px;width:100%;font-size:16px;font-weight:500}
 .btn-main{background:var(--husk);color:#fff}
+.btn-main .ripple-span { background: rgba(255,255,255,0.25); }
 .btn-log{background:var(--corn);color:var(--corn-ink);font-weight:700}
 .btn[disabled]{opacity:.6}
 .btn-ghost{background:transparent;color:var(--muted);padding:12px;margin-top:4px}
 
 label{display:block;font-size:13px;font-weight:500;color:var(--muted);margin:0 0 6px 4px}
 input,textarea{width:100%;padding:15px;margin-bottom:14px;border:1.5px solid var(--line);border-radius:14px;font-size:16px;
-  background:#f8faf7;font-family:inherit;color:var(--text);-webkit-appearance:none}
-input:focus,textarea:focus{outline:none;border-color:var(--husk);background:#fff}
+  background:var(--bg);font-family:inherit;color:var(--text);-webkit-appearance:none}
+input:focus,textarea:focus{outline:none;border-color:var(--husk);background:var(--card)}
 
 .list-title{font-size:14px;font-weight:700;margin:22px 4px 8px}
 .empty{color:var(--muted);font-size:14px;margin:0 4px}
@@ -61,7 +82,6 @@ input:focus,textarea:focus{outline:none;border-color:var(--husk);background:#fff
 .visit .t{flex:1;min-width:0}
 .visit .t b{display:block;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .visit .t span{font-size:13px;color:var(--muted)}
-.visit time{font-size:13px;color:var(--muted)}
 
 /* Map pins */
 .pin{width:32px;height:32px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:var(--husk);border:2.5px solid #fff;
@@ -69,16 +89,18 @@ input:focus,textarea:focus{outline:none;border-color:var(--husk);background:#fff
 .pin span{transform:rotate(45deg);color:#fff;font-weight:700;font-size:13px}
 .pin.start{background:var(--corn)}
 .pin.start span{color:var(--corn-ink)}
-.leaflet-top{margin-top:calc(var(--tb,100px) + 12px)}
-.leaflet-popup-content{font-size:15px;font-family:'Roboto',sans-serif}
+.pin.rest{background:#b4531f}
+.pin.hotel{background:#3d5a80}
 
 .toast{position:fixed;left:16px;right:16px;bottom:calc(110px + env(safe-area-inset-bottom,0px));z-index:3000;background:#222;color:#fff;
   padding:14px 16px;border-radius:14px;font-size:14px;line-height:1.4;display:none;box-shadow:0 4px 12px rgba(0,0,0,.3)}
 .toast.err{background:var(--error)}
 
 .tabs{flex-basis:100%;display:flex;margin-top:2px}
-.tab{flex:1;background:transparent;color:rgba(255,255,255,.7);border:0;border-bottom:3px solid transparent;padding:10px 0;font-size:15px;font-weight:500}
+.tab{flex:1;background:transparent;color:rgba(255,255,255,.7);border:0;border-bottom:3px solid transparent;padding:10px 0;font-size:14px;font-weight:500}
 .tab.on{color:#fff;border-bottom-color:var(--corn)}
+.tab .material-symbols-outlined { font-size: 20px; }
+
 .hist{position:fixed;left:0;right:0;bottom:0;top:var(--tb,100px);z-index:1500;background:var(--bg);overflow-y:auto;display:none;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .strip-wrap{background:var(--card);border-bottom:1px solid var(--line);padding:12px 0 8px;position:sticky;top:0;z-index:2}
 .month{font-size:15px;font-weight:700;padding:0 16px 8px}
@@ -98,27 +120,57 @@ input:focus,textarea:focus{outline:none;border-color:var(--husk);background:#fff
 .chip-btn{flex:none;background:var(--corn);color:var(--corn-ink);border:0;border-radius:100px;padding:10px 16px;font-weight:700;font-size:14px}
 .hv{background:var(--card);border-radius:14px;padding:14px;margin-top:10px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
 .hv b{font-size:16px}
-.hv .m{color:var(--muted);font-size:13px;margin-top:2px}
-.hv p{margin:8px 0 0;font-size:14px;line-height:1.4}
-.edit{flex:none;background:transparent;color:var(--husk);border:1.5px solid var(--line);border-radius:100px;padding:8px 14px;font-size:14px;font-weight:500}
+.edit{flex:none;background:transparent;color:var(--text);border:1.5px solid var(--line);border-radius:100px;padding:8px 14px;font-size:14px;font-weight:500}
 .back{position:fixed;left:16px;right:16px;width:auto;bottom:calc(16px + env(safe-area-inset-bottom,0px));z-index:1000;display:none}
 body.viewing .sheet,body.viewing .start{display:none!important}
 body.viewing .back{display:block}
 .btn-del{background:transparent;color:var(--error);border:1.5px solid var(--error);margin-top:10px;display:none}
-.tab{min-height:48px}.btn-end,.edit,.chip-btn{min-height:44px}.btn-ghost{min-height:48px}
 
-.menu{flex:none;width:44px;height:44px;border:0;background:transparent;color:#fff;border-radius:50%;position:relative;display:grid;place-items:center}
-.menu.dot::after{content:'';position:absolute;top:8px;right:8px;width:9px;height:9px;border-radius:50%;background:var(--corn);border:2px solid var(--husk)}
+.icon-btn{flex:none;width:40px;height:40px;border:0;background:transparent;color:#fff;border-radius:50%;position:relative;display:grid;place-items:center; margin-bottom: 12px;}
+.icon-btn.dot::after{content:'';position:absolute;top:6px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--corn);border:2px solid var(--husk)}
+
 .more{position:fixed;left:0;right:0;bottom:0;top:var(--tb,100px);z-index:1600;background:var(--bg);overflow-y:auto;display:none;padding-bottom:calc(24px + env(safe-area-inset-bottom,0px))}
 .more .inner{padding:20px 16px}
-.more h2{margin:0 0 6px;font-size:20px}
+.more h2{margin:0 0 16px;font-size:20px}
 .more p{color:var(--muted);line-height:1.45;margin:0 0 8px;font-size:15px}
-.more p.note{font-weight:500;color:var(--text)}
-.more .btn{margin-top:12px}
-.btn-line{background:transparent;color:var(--husk);border:1.5px solid var(--husk)}
-.sig{margin-top:36px;text-align:center;color:var(--muted);font-size:13px}
-.sig b{display:block;color:var(--text);font-size:15px;margin-bottom:2px}
-.by{text-align:center;color:var(--muted);font-size:13px;margin-top:14px}
+.btn-line{background:transparent;color:var(--text);border:1.5px solid var(--line); justify-content: flex-start; padding-left: 20px;}
+.roadrow{display:flex;justify-content:space-between;align-items:center;gap:12px;margin:10px 0 4px;font-size:14px;color:var(--muted)}
+.roadrow b{color:var(--text);font-size:16px}
+.actions{display:flex;gap:10px}
+.actions .btn{flex:1}
+
+/* Usage Box */
+.usage-box { background: var(--card); border: 1.5px solid var(--line); border-radius: 14px; padding: 14px; margin-bottom: 24px; }
+.usage-box .kv { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.usage-box .kv:last-child { border-bottom: none; padding-bottom: 0; }
+.usage-box .kv:first-child { padding-top: 0; }
+.usage-box b.warn { color: var(--error); }
+
+/* Landmarks */
+.dlg{position:fixed;inset:0;z-index:2500;background:rgba(0,0,0,.6);display:none;align-items:flex-end}
+.dlg .card{width:100%;background:var(--card);border-radius:24px 24px 0 0;padding:22px 16px calc(16px + env(safe-area-inset-bottom,0px))}
+details.hv{padding:0}
+details.hv summary{list-style:none;display:flex;align-items:center;gap:12px;padding:12px 14px;min-height:56px;cursor:pointer}
+details.hv summary::-webkit-details-marker{display:none}
+details.hv summary::after{content:'expand_more'; font-family: 'Material Symbols Outlined'; margin-left:auto; color: var(--muted); font-size: 24px; transition: transform 0.2s;}
+details.hv[open] summary::after{transform:rotate(180deg)}
+.hv .t{flex:1;min-width:0}
+.hv .t b,.hv .t small{display:block}
+.hv .t small{color:var(--muted);font-size:13px;margin-top:2px}
+.hv .body{padding:0 14px 14px;border-top:1px solid var(--line)}
+.kv{display:flex;gap:12px;padding:9px 0;font-size:14px;border-bottom:1px solid var(--line)}
+.kv span{flex:none;width:88px;color:var(--muted)}
+.kv b{font-weight:500;word-break:break-word}
+.lnk{display:inline-block;margin-top:12px;color:var(--text);font-weight:500;font-size:14px; text-decoration: underline;}
+.tag{flex:none;width:32px;height:32px;border-radius:8px;color:#fff;font-weight:700;display:grid;place-items:center;font-size:14px}
+.tag.rest{background:#b4531f}
+.tag.hotel{background:#3d5a80}
+.lmrow{display:flex;align-items:center;gap:12px;padding:12px 14px}
+.hv:has(>.lmrow){padding:0}
+.chips{display:flex;gap:8px;padding:0 16px 4px;overflow-x:auto;scrollbar-width:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--card);color:var(--text);border-radius:100px;padding:10px 16px;font-size:14px;font-weight:500;min-height:44px}
+.chip.on{background:var(--text);color:var(--bg);border-color:var(--text)}
+
 @media (prefers-reduced-motion:no-preference){.sheet,.start .panel{transition:transform .2s}}
 </style>
 </head>
@@ -128,32 +180,65 @@ body.viewing .back{display:block}
 
 <header class="topbar" id="topbar">
   <h1>Rasi Connect<span class="status" id="status">Not started</span></h1>
-  <button class="btn-end" id="endBtn" onclick="endDay()">End day</button>
-  <button class="menu" id="moreBtn" aria-label="More" onclick="toggleMore()"><svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor" aria-hidden="true"><circle cx="12" cy="5" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="12" cy="19" r="2"/></svg></button>
-  <div class="tabs"><button class="tab on" id="tabToday" onclick="switchTab('today')">Today</button><button class="tab" id="tabHist" onclick="switchTab('history')">History</button></div>
+  
+  <button class="btn-end" id="endBtn" onclick="endDay()"><span class="material-symbols-outlined" style="font-size:18px;">stop_circle</span> End day</button>
+  
+  <button class="icon-btn" id="themeBtn" aria-label="Toggle Dark Mode" onclick="toggleTheme()">
+    <span class="material-symbols-outlined" id="themeIcon">dark_mode</span>
+  </button>
+  
+  <button class="icon-btn" id="moreBtn" aria-label="More" onclick="toggleMore()">
+    <span class="material-symbols-outlined">menu</span>
+  </button>
+
+  <div class="tabs">
+    <button class="tab on" id="tabToday" onclick="switchTab('today')">
+      <span class="material-symbols-outlined">map</span> Today
+    </button>
+    <button class="tab" id="tabHist" onclick="switchTab('history')">
+      <span class="material-symbols-outlined">history</span> History
+    </button>
+    <button class="tab" id="tabPlaces" onclick="switchTab('places')">
+      <span class="material-symbols-outlined">storefront</span> Places
+    </button>
+  </div>
 </header>
 
 <div class="start" id="start">
   <div class="panel">
     <h2>Ready for the field?</h2>
     <p>Start your day to mark your starting point. Each visit you log is pinned at your current location.</p>
-    <button class="btn btn-main" id="startBtn" onclick="startDay()">Start day</button>
-    <div class="by">By SKMV</div>
+    <button class="btn btn-main" id="startBtn" onclick="startDay()">
+      <span class="material-symbols-outlined">play_arrow</span> Start day
+    </button>
   </div>
 </div>
 
 <section class="sheet" id="sheet" aria-label="Log a visit">
   <div class="grip"></div>
-  <button class="btn btn-log open-btn" onclick="toggleSheet(true)">Log a visit</button>
+  <div class="actions open-btn">
+    <button class="btn btn-log" onclick="toggleSheet(true)">
+      <span class="material-symbols-outlined">add_location_alt</span> Log a visit
+    </button>
+    <button class="btn btn-main" onclick="openLandmark()">
+      <span class="material-symbols-outlined">pin_drop</span> Landmark
+    </button>
+  </div>
   <div class="body">
-    <label for="storeName">Store or dealer</label>
+    <label for="territory">Territory</label>
+    <input type="text" id="territory" autocomplete="off">
+    <label for="storeName">Store name</label>
     <input type="text" id="storeName" autocomplete="off">
-    <label for="distName">Distributor</label>
-    <input type="text" id="distName" autocomplete="off">
-    <label for="remarks">Notes</label>
+    <label for="ownerName">Owner name</label>
+    <input type="text" id="ownerName" autocomplete="off">
+    <label for="remarks">Remarks</label>
     <textarea id="remarks" rows="3"></textarea>
-    <button class="btn btn-log" id="saveBtn" onclick="logVisit()">Save visit at my location</button>
-    <button class="btn btn-del" id="delBtn" onclick="deleteVisit()">Delete this visit</button>
+    <button class="btn btn-log" id="saveBtn" onclick="logVisit()">
+      <span class="material-symbols-outlined">save</span> Save at my location
+    </button>
+    <button class="btn btn-del" id="delBtn" onclick="deleteVisit()">
+      <span class="material-symbols-outlined">delete</span> Delete visit
+    </button>
     <button class="btn btn-ghost" onclick="toggleSheet(false)">Close</button>
 
     <div class="list-title" id="listTitle">Today's visits</div>
@@ -162,38 +247,151 @@ body.viewing .back{display:block}
 </section>
 
 <section class="hist" id="hist"><div class="strip-wrap"><div class="month" id="month"></div><div class="strip" id="strip"></div></div><div class="inner" id="histBody"></div></section>
-<button class="btn btn-main back" onclick="backFromMap()">Back to history</button>
+<section class="hist" id="places"><div class="strip-wrap"><div class="chips" id="plChips"></div></div><div class="inner" id="plBody"></div></section>
+<button class="btn btn-main back" onclick="backFromMap()">
+  <span class="material-symbols-outlined">arrow_back</span> Back to history
+</button>
 
-<section class="more" id="more" aria-label="Backup and transfer"><div class="inner">
-  <h2>Backup and transfer</h2>
+<section class="more" id="more" aria-label="Menu"><div class="inner">
+  
+  <h2>Reports</h2>
+  <div style="display:flex; flex-direction:column; gap:8px; margin-bottom: 24px;">
+    <button class="btn btn-line" onclick="openReport('Hotel')"><span class="material-symbols-outlined">hotel</span> 1. Hotel</button>
+    <button class="btn btn-line" onclick="openReport('Restaurant')"><span class="material-symbols-outlined">restaurant</span> 2. Restaurant</button>
+    <button class="btn btn-line" onclick="openReport('All')"><span class="material-symbols-outlined">list</span> 3. List All</button>
+  </div>
+
+  <h2>API Limits & Usage</h2>
+  <div class="usage-box">
+    <div class="kv"><span>Maps (Day)</span><b id="umD">0 / 15</b></div>
+    <div class="kv"><span>Maps (Month)</span><b id="umM">0 / 1000</b></div>
+    <div class="kv"><span>Routes (Day)</span><b id="udD">0 / 1</b></div>
+    <div class="kv"><span>Routes (Month)</span><b id="udM">0 / 30</b></div>
+  </div>
+
+  <h2>Backup & Transfer</h2>
   <p class="note" id="bkNote"></p>
-  <p>A backup holds every visit from all days, plus the day in progress. Back up once a month, and before moving to a new phone.</p>
-  <button class="btn btn-main" id="bkSave" onclick="saveBackup(false)">Save backup to phone</button>
-  <button class="btn btn-log" id="bkShare" onclick="saveBackup(true)">Send backup to another device</button>
-  <button class="btn btn-line" onclick="$('bkFile').click()">Restore from a backup file</button>
+  <p>A backup holds every visit from all days. Back up once a month.</p>
+  <button class="btn btn-main" id="bkSave" style="margin-top: 12px; justify-content: center" onclick="saveBackup(false)">
+    <span class="material-symbols-outlined">download</span> Save to phone
+  </button>
+  <button class="btn btn-log" id="bkShare" style="margin-top: 12px; justify-content: center" onclick="saveBackup(true)">
+    <span class="material-symbols-outlined">share</span> Send to another device
+  </button>
+  <button class="btn btn-line" style="margin-top: 12px; justify-content: center; padding-left: 0;" onclick="$('bkFile').click()">
+    <span class="material-symbols-outlined">upload</span> Restore from file
+  </button>
   <input type="file" id="bkFile" accept=".json,application/json" hidden>
-  <div class="sig"><b>Rasi Connect</b>By SKMV</div>
 </div></section>
+
+<div class="dlg" id="lm" role="dialog" aria-modal="true"><div class="card">
+  <h3 id="lmTitle">Tag a landmark</h3>
+  <div id="lmStep1">
+    <p>What are you tagging?</p>
+    <button class="btn btn-log" style="margin-top: 12px" onclick="pickLm('Restaurant')">
+      <span class="material-symbols-outlined">restaurant</span> Restaurant
+    </button>
+    <button class="btn btn-main" style="margin-top: 12px" onclick="pickLm('Hotel')">
+      <span class="material-symbols-outlined">hotel</span> Hotel
+    </button>
+  </div>
+  <div id="lmStep2" style="display:none">
+    <label for="lmName" id="lmLabel"></label>
+    <input type="text" id="lmName" autocomplete="off">
+    <button class="btn btn-log" id="lmSave" style="margin-top: 12px" onclick="saveLandmark()">Save at my location</button>
+  </div>
+  <button class="btn btn-ghost" onclick="closeLandmark()">Cancel</button>
+</div></div>
 
 <div class="toast" id="toast" role="status"></div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
+// --- RIPPLE EFFECT ---
+document.addEventListener('click', function(e) {
+  const btn = e.target.closest('button');
+  if (btn) {
+    const rect = btn.getBoundingClientRect();
+    const ripple = document.createElement('span');
+    const size = Math.max(rect.width, rect.height);
+    ripple.style.width = ripple.style.height = size + 'px';
+    ripple.style.left = e.clientX - rect.left - size/2 + 'px';
+    ripple.style.top = e.clientY - rect.top - size/2 + 'px';
+    ripple.className = 'ripple-span';
+    btn.appendChild(ripple);
+    setTimeout(() => ripple.remove(), 600);
+  }
+});
+
+// --- DARK MODE ---
+const THEME_KEY = 'fieldtracker.theme';
+function applyTheme(isDark) {
+  if (isDark) {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    $('themeIcon').textContent = 'light_mode';$('metaThemeColor').setAttribute('content', '#1a291e');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+    $('themeIcon').textContent = 'dark_mode';$('metaThemeColor').setAttribute('content', '#24392a');
+  }
+}
+function toggleTheme() {
+  const isDark = document.documentElement.getAttribute('data-theme') !== 'dark';
+  localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+  applyTheme(isDark);
+}
+if (localStorage.getItem(THEME_KEY) === 'dark') applyTheme(true);
+
+// --- API USAGE TRACKING ---
+const UKEY = 'fieldtracker.usage';
+function getUsage(type) {
+  let u = JSON.parse(localStorage.getItem(UKEY) || '{"map":{"d":"","dc":0,"m":"","mc":0},"dir":{"d":"","dc":0,"m":"","mc":0}}');
+  let today = dkey(new Date()); let month = today.substring(0, 7);
+  if (u[type].d !== today) { u[type].d = today; u[type].dc = 0; }
+  if (u[type].m !== month) { u[type].m = month; u[type].mc = 0; }
+  return u[type];
+}
+function trackAPI(type) {
+  let u = JSON.parse(localStorage.getItem(UKEY) || '{"map":{"d":"","dc":0,"m":"","mc":0},"dir":{"d":"","dc":0,"m":"","mc":0}}');
+  let today = dkey(new Date()); let month = today.substring(0, 7);
+  if (u[type].d !== today) { u[type].d = today; u[type].dc = 0; }
+  if (u[type].m !== month) { u[type].m = month; u[type].mc = 0; }
+  u[type].dc++; u[type].mc++;
+  localStorage.setItem(UKEY, JSON.stringify(u));
+  renderUsage();
+}
+function renderUsage() {
+  let m = getUsage('map'), d = getUsage('dir');
+  if($('umD')) {
+    $('umD').textContent = `${m.dc} / 15`; $('umD').className = m.dc >= 15 ? 'warn' : '';
+    $('umM').textContent = `${m.mc} / 1000`; $('umM').className = m.mc >= 1000 ? 'warn' : '';
+    $('udD').textContent = `${d.dc} / 1`; $('udD').className = d.dc >= 1 ? 'warn' : '';
+    $('udM').textContent = `${d.mc} / 30`; $('udM').className = d.mc >= 30 ? 'warn' : '';
+  }
+}
+
+// --- APP LOGIC ---
 const KEY = 'fieldtracker.day';
 const FOLDER = 'Rasi Connect PM';
 const native = !!(window.Capacitor && Capacitor.isNativePlatform && Capacitor.isNativePlatform());
 const Plugins = window.Capacitor ? Capacitor.Plugins : {};
 const HKEY = 'fieldtracker.history';
-const SAVE_LABEL = 'Save visit at my location';
-let history = {}, editIndex = null, selDay = null, histLayer;
+const SAVE_LABEL = '<span class="material-symbols-outlined">save</span> Save at my location';
+let history = {}, editIndex = null, selDay = null;
 try { history = JSON.parse(localStorage.getItem(HKEY) || '{}'); } catch (e) { history = {}; }
+const RKEY = 'fieldtracker.road';
+let road = {};
+try { road = JSON.parse(localStorage.getItem(RKEY) || '{}'); } catch (e) { road = {}; }
 const dkey = d => { const x = new Date(d); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 const curKey = () => data.length ? dkey(data[0].iso) : null;
-let map, layer, data = [], markers = [], toastTimer;
 
+let map, infoWindow, markers = [], histMarkers = [], data = [], toastTimer;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const visits = () => data.filter(d => d.type === 'Visit');
+const terr = e => e.territory ?? e.dist ?? '';
+const route = es => es.filter(e => e.type !== 'Landmark');
+const lmarks = es => es.filter(e => e.type === 'Landmark');
+const kv = (k, v) => v ? `<div class="kv"><span>${k}</span><b>${esc(v)}</b></div>` : '';
+const clearForm = () => ['territory', 'storeName', 'ownerName', 'remarks'].forEach(id => $(id).value = '');
 const save = () => { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) {} writeFile(); };
 
 async function writeFile(final) {
@@ -206,348 +404,35 @@ async function writeFile(final) {
     });
     if (final) { try { await Plugins.Filesystem.deleteFile({ path: FOLDER + '/Drafts/Route_' + curKey() + '.draft.json', directory: 'DOCUMENTS' }); } catch (e) {} }
     return true;
-  } catch (e) { toast('Could not write to the ' + FOLDER + ' folder.', true); return false; }
+  } catch (e) { toast('Could not write to the folder.', true); return false; }
 }
 
 function toast(msg, isErr) {
-  const t = $('toast');
-  t.textContent = msg;
-  t.className = 'toast' + (isErr ? ' err' : '');
-  t.style.display = 'block';
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => t.style.display = 'none', 3500);
+  const t = $('toast'); t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : '');
+  t.style.display = 'block'; clearTimeout(toastTimer); toastTimer = setTimeout(() => t.style.display = 'none', 4000);
 }
 
 function locate(btn, busyText, ok) {
-  const label = btn.textContent;
-  btn.disabled = true;
-  btn.textContent = busyText;
-  const done = () => { btn.disabled = false; btn.textContent = label; };
-  if (native) {
-    Plugins.Geolocation.requestPermissions()
-      .then(() => Plugins.Geolocation.getCurrentPosition({ enableHighAccuracy: true, timeout: 15000 }))
-      .then(p => { done(); ok(p); })
-      .catch(() => { done(); toast('Could not get your location. Turn on Location in phone settings and allow it for this app.', true); });
-    return;
-  }
-  if (!navigator.geolocation) { done(); toast('This device does not support location.', true); return; }
+  const label = btn.innerHTML; btn.disabled = true; btn.textContent = busyText;
+  const done = () => { btn.disabled = false; btn.innerHTML = label; };
+  if (!navigator.geolocation) { done(); toast('Location not supported.', true); return; }
   navigator.geolocation.getCurrentPosition(
     p => { done(); ok(p); },
-    err => {
-      done();
-      let msg = 'Could not get your location. Try again.';
-      if (!window.isSecureContext) msg = 'Location only works on https or localhost pages, not a file opened from storage. Host the file and open it from its web address.';
-      else if (err.code === 1) msg = 'Location is blocked. Tap the lock icon next to the address, allow Location, then reload.';
-      else if (err.code === 2) msg = 'Location is unavailable. Turn on your device\'s location services and try again.';
-      else if (err.code === 3) msg = 'Location timed out. Move to an open area and try again.';
-      toast(msg, true);
-    },
+    err => { done(); toast('Could not get your location. Try again.', true); },
     { enableHighAccuracy: true, timeout: 15000, maximumAge: 10000 }
   );
 }
 
 function initMap() {
-  map = L.map('map', { zoomControl: false }).setView([20.59, 78.96], 5);
-  const street = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Tiles © Esri'
-  }).addTo(map);
-  const satellite = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-    maxZoom: 19, attribution: 'Tiles © Esri'
+  map = new google.maps.Map($('map'), {
+    center: { lat: 20.59, lng: 78.96 }, zoom: 5, disableDefaultUI: true, mapTypeControl: true, 
+    mapTypeControlOptions: { position: google.maps.ControlPosition.TOP_RIGHT }, mapId: 'RASI_CONNECT_MAP' 
   });
-  L.control.layers({ 'Map': street, 'Satellite': satellite }, null, { position: 'topright' }).addTo(map);
-  layer = L.layerGroup().addTo(map);
+  infoWindow = new google.maps.InfoWindow();
 }
 
-function popupHtml(e) {
+function popupHtml(e, n) {
   if (e.type === 'Start') return `<b>Start of day</b><br><small>${esc(e.time)}</small>`;
-  return `<b style="color:#24392a">${esc(e.store)}</b>` +
-    (e.dist ? `<br><span style="color:#66706a">${esc(e.dist)}</span>` : '') +
-    (e.remarks ? `<p style="margin:8px 0 0">${esc(e.remarks)}</p>` : '') +
-    `<br><small style="color:#66706a">${esc(e.time)}</small>`;
-}
-
-function addMarker(e, idx) {
-  const isStart = e.type === 'Start';
-  const n = isStart ? 'S' : visits().indexOf(e) + 1;
-  const icon = L.divIcon({
-    className: '',
-    html: `<div class="pin${isStart ? ' start' : ''}"><span>${n}</span></div>`,
-    iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -30]
-  });
-  markers[idx] = L.marker([e.lat, e.lng], { icon }).addTo(layer).bindPopup(popupHtml(e));
-  return markers[idx];
-}
-
-function renderUI() {
-  refreshBackupUI();
-  const active = data.length > 0;
-  $('start').style.display = active ? 'none' : 'flex';
-  $('sheet').style.display = active ? 'block' : 'none';
-  $('endBtn').style.display = active ? 'block' : 'none';
-  const v = visits().length;
-  $('status').textContent = active ? `${v} ${v === 1 ? 'visit' : 'visits'} logged` : 'Not started';
-
-  const list = $('list');
-  if (!v) { list.innerHTML = '<p class="empty">No visits yet. Your first one will show up here.</p>'; return; }
-  list.innerHTML = data.map((e, i) => e.type !== 'Visit' ? '' : `
-    <div class="visit">
-      <div class="n">${visits().indexOf(e) + 1}</div>
-      <div class="t" onclick="focusVisit(${i})"><b>${esc(e.store)}</b><span>${esc(e.dist || 'No distributor')}, ${esc(e.time)}</span></div>
-      <button class="edit" onclick="editVisit(${i})">Edit</button>
-    </div>`).reverse().join('');
-}
-
-function focusVisit(i) {
-  toggleSheet(false);
-  map.setView([data[i].lat, data[i].lng], 16);
-  markers[i].openPopup();
-}
-
-function toggleSheet(open) {
-  if (!open && editIndex !== null) finishEdit();
-  $('sheet').classList.toggle('open', open);
-  if (open) $('storeName').focus({ preventScroll: true });
-}
-
-function startDay() {
-  locate($('startBtn'), 'Getting location…', p => {
-    const e = { type: 'Start', time: new Date().toLocaleString(), iso: new Date().toISOString(), lat: p.coords.latitude, lng: p.coords.longitude };
-    data = [e]; save();
-    addMarker(e, 0).openPopup();
-    map.setView([e.lat, e.lng], 14);
-    renderUI();
-  });
-}
-
-function logVisit() {
-  const store = $('storeName').value.trim();
-  if (!store) { toast('Enter a store or dealer name to save this visit.', true); $('storeName').focus(); return; }
-  if (editIndex !== null) {
-    Object.assign(data[editIndex], { store, dist: $('distName').value.trim(), remarks: $('remarks').value.trim() });
-    save(); rebuildMarkers(); renderUI(); finishEdit(); toast('Visit updated.');
-    return;
-  }
-  locate($('saveBtn'), 'Getting location…', p => {
-    const e = {
-      type: 'Visit', store, dist: $('distName').value.trim(), remarks: $('remarks').value.trim(),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), iso: new Date().toISOString(),
-      lat: p.coords.latitude, lng: p.coords.longitude
-    };
-    data.push(e); save();
-    renderUI();
-    $('storeName').value = $('distName').value = $('remarks').value = '';
-    toggleSheet(false);
-    map.setView([e.lat, e.lng], 16);
-    addMarker(e, data.length - 1).openPopup();
-    toast('Visit saved.');
-  });
-}
-
-async function endDay() {
-  if (!data.length) return;
-  if (!confirm('End the day? Your visits will be saved as the final record.')) return;
-  const key = curKey();
-  let saved = false;
-  if (native) saved = await writeFile(true);
-  if (!saved) {
-    const href = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data, null, 2));
-    const a = document.createElement('a');
-    a.href = href;
-    a.download = FOLDER + ' - Route_' + key + '.json';
-    document.body.appendChild(a); a.click(); a.remove();
-  }
-  history[key] = (history[key] || []).concat(data);
-  try { localStorage.setItem(HKEY, JSON.stringify(history)); } catch (e) {}
-  data = []; markers = []; layer.clearLayers(); save(); renderUI();
-  selDay = key;
-  switchTab('history');
-  toast(saved ? 'Day saved to Documents/' + FOLDER : 'Day saved and exported.');
-}
-
-function editVisit(i) {
-  editIndex = i;
-  $('storeName').value = data[i].store; $('distName').value = data[i].dist || ''; $('remarks').value = data[i].remarks || '';
-  $('saveBtn').textContent = 'Update visit';
-  $('delBtn').style.display = 'block';
-  toggleSheet(true);
-}
-function finishEdit() {
-  editIndex = null;
-  $('storeName').value = $('distName').value = $('remarks').value = '';
-  $('saveBtn').textContent = SAVE_LABEL;
-  $('delBtn').style.display = 'none';
-  $('sheet').classList.remove('open');
-}
-function deleteVisit() {
-  if (editIndex === null || !confirm('Delete this visit?')) return;
-  data.splice(editIndex, 1);
-  save(); rebuildMarkers(); renderUI(); finishEdit();
-}
-function rebuildMarkers() { layer.clearLayers(); markers = []; data.forEach((e, i) => addMarker(e, i)); }
-
-/* ---------- History tab ---------- */
-const pinIcon = (n, start) => L.divIcon({ className: '', html: `<div class="pin${start ? ' start' : ''}"><span>${n}</span></div>`, iconSize: [32, 32], iconAnchor: [16, 32], popupAnchor: [0, -30] });
-const dayEntries = k => k === curKey() ? data : (history[k] || []);
-
-function switchTab(name) {
-  closeMore();
-  exitViewing();
-  $('tabToday').classList.toggle('on', name === 'today');
-  $('tabHist').classList.toggle('on', name === 'history');
-  $('hist').style.display = name === 'history' ? 'block' : 'none';
-  if (name === 'history') { if (!selDay) selDay = curKey() || dkey(new Date()); renderHistory(true); }
-}
-
-function pickDay(k) { selDay = k; renderHistory(false); }
-
-function renderHistory(toEnd) {
-  const has = new Set(Object.keys(history));
-  if (curKey()) has.add(curKey());
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  let from = new Date(today); from.setDate(from.getDate() - 29);
-  has.forEach(k => { const d = new Date(k + 'T00:00:00'); if (d < from) from = d; });
-  const days = [];
-  for (const d = new Date(from); d <= today && days.length < 500; d.setDate(d.getDate() + 1)) days.push(dkey(d));
-  const strip = $('strip');
-  strip.innerHTML = days.map(k => {
-    const d = new Date(k + 'T00:00:00');
-    return `<button class="day${has.has(k) ? ' has' : ''}${k === selDay ? ' sel' : ''}" onclick="pickDay('${k}')"><small>${d.toLocaleDateString('en-IN', { weekday: 'short' })}</small><b>${d.getDate()}</b><i></i></button>`;
-  }).join('');
-  const sd = new Date(selDay + 'T00:00:00');
-  $('month').textContent = sd.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
-  const entries = dayEntries(selDay);
-  const vs = entries.filter(e => e.type === 'Visit');
-  const st = entries.find(e => e.type === 'Start');
-  const label = sd.toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'short' });
-  $('histBody').innerHTML = !entries.length
-    ? `<p class="empty">No visits recorded on ${esc(label)}.</p>`
-    : `<div class="sum"><div><h3>${esc(label)}</h3><p>${vs.length} ${vs.length === 1 ? 'visit' : 'visits'}${st ? ', started ' + esc(new Date(st.iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })) : ''}${selDay === curKey() ? ' (in progress)' : ''}</p></div><button class="chip-btn" onclick="showOnMap()">Show on map</button></div>`
-      + vs.map((e, i) => `<div class="hv"><b>${i + 1}. ${esc(e.store)}</b><div class="m">${esc(e.dist || 'No distributor')}, ${esc(e.time)}</div>${e.remarks ? `<p>${esc(e.remarks)}</p>` : ''}</div>`).join('');
-  if (toEnd) strip.scrollLeft = strip.scrollWidth;
-  else { const el = strip.querySelector('.sel'); if (el) el.scrollIntoView({ inline: 'center', block: 'nearest' }); }
-}
-
-function showOnMap() {
-  const entries = dayEntries(selDay);
-  if (!entries.length) return;
-  if (!histLayer) histLayer = L.layerGroup();
-  histLayer.clearLayers();
-  map.removeLayer(layer);
-  histLayer.addTo(map);
-  const pts = [], vs = entries.filter(e => e.type === 'Visit');
-  entries.forEach(e => {
-    const s = e.type === 'Start';
-    L.marker([e.lat, e.lng], { icon: pinIcon(s ? 'S' : vs.indexOf(e) + 1, s) }).addTo(histLayer).bindPopup(popupHtml(e));
-    pts.push([e.lat, e.lng]);
-  });
-  $('hist').style.display = 'none';
-  document.body.classList.add('viewing');
-  map.fitBounds(pts, { padding: [60, 60], maxZoom: 16 });
-}
-function exitViewing() {
-  if (!document.body.classList.contains('viewing')) return;
-  document.body.classList.remove('viewing');
-  histLayer.clearLayers(); map.removeLayer(histLayer); layer.addTo(map);
-}
-function backFromMap() { switchTab('history'); }
-
-/* ---------- Backup and transfer ---------- */
-const LKEY = 'fieldtracker.lastBackup';
-const validDay = a => Array.isArray(a) && a.every(e => e && typeof e.lat === 'number' && typeof e.lng === 'number' && e.iso);
-
-function refreshBackupUI() {
-  const last = localStorage.getItem(LKEY);
-  const keys = Object.keys(history).sort();
-  const hasData = keys.length > 0 || data.length > 0;
-  const age = d => Math.floor((Date.now() - new Date(d)) / 864e5);
-  let due = false;
-  if (hasData) due = last ? age(last) >= 30 : (keys.length > 0 && age(keys[0] + 'T00:00:00') >= 30);
-  const fmt = d => new Date(d).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' });
-  $('bkNote').textContent = last
-    ? 'Last backup: ' + fmt(last) + (due ? '. A month has passed, so it is time to back up again.' : '.')
-    : 'No backup yet.' + (due ? ' You have a month of data, so it is time to back up.' : '');
-  $('moreBtn').classList.toggle('dot', due);
-  return due;
-}
-
-function toggleMore() { $('more').style.display === 'block' ? closeMore() : openMore(); }
-function openMore() { exitViewing(); refreshBackupUI(); $('more').style.display = 'block'; }
-function closeMore() { $('more').style.display = 'none'; }
-
-async function makeBackupFile() {
-  const name = 'Rasi Connect Backup ' + dkey(new Date()) + '.json';
-  const text = JSON.stringify({ app: 'Rasi Connect', format: 1, created: new Date().toISOString(), history, current: data }, null, 2);
-  if (native) {
-    try {
-      const path = FOLDER + '/Backups/' + name;
-      await Plugins.Filesystem.writeFile({ path, data: text, directory: 'DOCUMENTS', encoding: 'utf8', recursive: true });
-      localStorage.setItem(LKEY, new Date().toISOString()); refreshBackupUI();
-      return { path };
-    } catch (e) { /* fall through to download */ }
-  }
-  const a = document.createElement('a');
-  a.href = 'data:text/json;charset=utf-8,' + encodeURIComponent(text);
-  a.download = name;
-  document.body.appendChild(a); a.click(); a.remove();
-  localStorage.setItem(LKEY, new Date().toISOString()); refreshBackupUI();
-  return {};
-}
-
-async function saveBackup(share) {
-  const btn = $(share ? 'bkShare' : 'bkSave');
-  btn.disabled = true;
-  try {
-    const r = await makeBackupFile();
-    if (share && r.path && Plugins.Share) {
-      const { uri } = await Plugins.Filesystem.getUri({ path: r.path, directory: 'DOCUMENTS' });
-      await Plugins.Share.share({ title: 'Rasi Connect backup', files: [uri], dialogTitle: 'Send backup to another device' });
-    } else {
-      toast(r.path ? 'Backup saved in Documents/' + FOLDER + '/Backups' : 'Backup downloaded.');
-    }
-  } catch (e) {
-    if (!/cancel/i.test((e && e.message) || '')) toast('Could not complete the backup. Try again.', true);
-  }
-  btn.disabled = false;
-}
-
-$('bkFile').onchange = async ev => {
-  const f = ev.target.files[0];
-  ev.target.value = '';
-  if (!f) return;
-  try {
-    const b = JSON.parse(await f.text());
-    if (!b || b.app !== 'Rasi Connect' || typeof b.history !== 'object') throw new Error('bad');
-    const days = Object.keys(b.history).filter(k => validDay(b.history[k]));
-    if (!confirm('Restore ' + days.length + ' days from this backup? Days already on this phone stay as they are.')) return;
-    let added = 0;
-    days.forEach(k => { if (!history[k]) { history[k] = b.history[k]; added++; } });
-    try { localStorage.setItem(HKEY, JSON.stringify(history)); } catch (e) {}
-    let msg = added + (added === 1 ? ' day' : ' days') + ' restored';
-    if (!data.length && Array.isArray(b.current) && b.current.length && validDay(b.current)) {
-      data = b.current; save(); rebuildMarkers();
-      const last = data[data.length - 1];
-      map.setView([last.lat, last.lng], 14);
-      msg += ', plus the day in progress';
-    }
-    renderUI(); closeMore();
-    if ($('hist').style.display === 'block') renderHistory(false);
-    toast(msg + '.');
-  } catch (e) {
-    toast('That file is not a Rasi Connect backup.', true);
-  }
-};
-
-// Boot: restore an unfinished day after a refresh or crash
-if (native && Plugins.Filesystem) Plugins.Filesystem.requestPermissions().catch(() => {});
-const fitTop = () => document.documentElement.style.setProperty('--tb', $('topbar').offsetHeight + 'px');
-fitTop();
-if (window.ResizeObserver) new ResizeObserver(fitTop).observe($('topbar'));
-initMap();
-try { data = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { data = []; }
-data.forEach((e, i) => addMarker(e, i));
-if (data.length) map.setView([data[data.length - 1].lat, data[data.length - 1].lng], 14);
-renderUI();
-if (refreshBackupUI()) toast('It has been a month. Open the menu to back up your data.');
-</script>
-</body>
-</html>
+  if (e.type === 'Landmark') return `<b>${esc(e.kind)}: ${esc(e.name)}</b><br><small style="color:#66706a">${esc(e.time)}</small>`;
+  const row = (k, v) => v ? `<div><span style="color:#66706a">${k}:</span> ${esc(v)}</div>` : '';
+  return `<b style="color:#24392a">#${n} ${esc(e.store)}</b>` + row('Territory', terr(
